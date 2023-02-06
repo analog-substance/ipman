@@ -24,7 +24,10 @@ func (s *IPSet) Add(ip net.IP) bool {
 }
 
 func (s *IPSet) AddNetwork(network *net.IPNet) int {
-	return s.AddRange(GetNetworkIPs(network))
+	return s.AddRange(GetIPs(network))
+}
+func (s *IPSet) AddNetworkWithFilter(network *net.IPNet, predicate func(net.IP) bool) int {
+	return s.AddRange(GetIPsWithFilter(network, predicate))
 }
 
 func (s *IPSet) AddRange(items []net.IP) int {
@@ -62,7 +65,11 @@ func (s *IPSet) SortedSlice() []net.IP {
 	return ips
 }
 
-func GetNetworkIPs(network *net.IPNet) []net.IP {
+func GetIPs(network *net.IPNet) []net.IP {
+	return GetIPsWithFilter(network, func(i net.IP) bool { return true })
+}
+
+func GetIPsWithFilter(network *net.IPNet, predicate func(net.IP) bool) []net.IP {
 	var ips []net.IP
 
 	count := cidr.AddressCount(network)
@@ -75,7 +82,9 @@ func GetNetworkIPs(network *net.IPNet) []net.IP {
 			ip = cidr.Inc(ip)
 		}
 
-		ips = append(ips, ip)
+		if predicate(ip) {
+			ips = append(ips, ip)
+		}
 	}
 
 	return ips
